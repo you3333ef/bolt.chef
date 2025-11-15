@@ -1,0 +1,203 @@
+// This is your Prisma schema file
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User Management (Unified for both platforms)
+model User {
+  id            String    @id @default(cuid())
+  clerkId       String    @unique
+  email         String    @unique
+  username      String?   @unique
+  name          String?
+  avatar        String?
+  bio           String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relationships
+  projects      Project[]
+  recipes       Recipe[]
+  likes         RecipeLike[]
+  comments      Comment[]
+  aiChats       AIChat[]
+
+  @@index([clerkId])
+  @@index([email])
+}
+
+// Bolt.diy Features - AI Development Projects
+model Project {
+  id            String    @id @default(cuid())
+  name          String
+  description   String?
+  type          String    // web, mobile, api, etc.
+  framework     String?   // next, react, vue, etc.
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  files         ProjectFile[]
+  aiChats       AIChat[]
+  deployments   Deployment[]
+
+  isPublic      Boolean   @default(false)
+  status        String    @default("active") // active, archived, deleted
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model ProjectFile {
+  id            String    @id @default(cuid())
+  projectId     String
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  path          String
+  content       String    @db.Text
+  language      String?
+  size          Int       @default(0)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([projectId, path])
+  @@index([projectId])
+}
+
+model AIChat {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId     String?
+  project       Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  provider      String    // openai, anthropic, google, etc.
+  model         String
+  messages      Json      // Array of chat messages
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([projectId])
+}
+
+model Deployment {
+  id            String    @id @default(cuid())
+  projectId     String
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  platform      String    // netlify, vercel, github-pages
+  url           String?
+  status        String    // pending, deployed, failed
+  logs          String?   @db.Text
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+}
+
+// Chef Platform Features - Recipe Management
+model Recipe {
+  id            String    @id @default(cuid())
+  title         String
+  description   String?   @db.Text
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  ingredients   Json      // Array of ingredients with quantities
+  instructions  Json      // Step-by-step instructions
+
+  prepTime      Int?      // in minutes
+  cookTime      Int?      // in minutes
+  servings      Int?
+  difficulty    String?   // easy, medium, hard
+
+  category      String?   // breakfast, lunch, dinner, dessert, etc.
+  cuisine       String?   // italian, chinese, mexican, etc.
+  tags          String[]
+
+  images        String[]
+  videoUrl      String?
+
+  nutrition     Json?     // calories, protein, carbs, etc.
+
+  isPublic      Boolean   @default(true)
+  aiGenerated   Boolean   @default(false)
+  aiPrompt      String?   @db.Text
+
+  likes         RecipeLike[]
+  comments      Comment[]
+
+  viewCount     Int       @default(0)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([category])
+  @@index([cuisine])
+  @@index([isPublic])
+}
+
+model RecipeLike {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipeId      String
+  recipe        Recipe    @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime  @default(now())
+
+  @@unique([userId, recipeId])
+  @@index([userId])
+  @@index([recipeId])
+}
+
+model Comment {
+  id            String    @id @default(cuid())
+  content       String    @db.Text
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipeId      String
+  recipe        Recipe    @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  parentId      String?
+  parent        Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies       Comment[] @relation("CommentReplies")
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([recipeId])
+  @@index([parentId])
+}
+
+// Integrated Features - AI Recipe Generation
+model AIRecipeGeneration {
+  id            String    @id @default(cuid())
+  userId        String
+
+  prompt        String    @db.Text
+  ingredients   String[]
+  preferences   Json?     // dietary restrictions, allergies, etc.
+
+  generatedRecipe Json?
+  provider      String
+  model         String
+
+  createdAt     DateTime  @default(now())
+
+  @@index([userId])
+}
