@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  api:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_DB: boltchef
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+  redis:
+    image: redis:7
