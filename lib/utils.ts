@@ -19,6 +19,10 @@ export function formatTimeAgo(date: Date | string): string {
   const past = new Date(date)
   const seconds = Math.floor((now.getTime() - past.getTime()) / 1000)
 
+  if (seconds < 0) {
+    return 'in the future'
+  }
+
   const intervals = {
     year: 31536000,
     month: 2592000,
